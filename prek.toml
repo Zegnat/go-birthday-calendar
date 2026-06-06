@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 Martijn van der Ven
+# SPDX-License-Identifier: 0BSD
+
+default_stages = ["pre-commit"]
+
+[[repos]]
+repo = "https://github.com/trim21/dprint-pre-commit"
+rev = "319b8f365908bda5d0440650819c24073cb5bee6" # frozen: v0.53.1.0
+hooks = [
+  { id = "dprint" },
+  { id = "dprint", alias = "dprint-update", name = "dprint config update", entry = "dprint config update --yes", pass_filenames = false, stages = ["pre-push"] },
+]
+
+[[repos]]
+repo = "https://github.com/golangci/golangci-lint"
+rev = "c0d3ddc9cf3faa61a4e378e879ece580256d76e5" # frozen: v2.12.2
+hooks = [
+  { id = "golangci-lint-fmt", pass_filenames = false },
+  { id = "golangci-lint-full", pass_filenames = false },
+]
+
+[[repos]]
+repo = "https://github.com/fsfe/reuse-tool"
+rev = "a1bb792acda6fd0724936b4ebbdbc8eceb9c0459" # frozen: v6.2.0
+hooks = [
+  { id = "reuse" },
+]
+
+[[repos]]
+repo = "https://github.com/ref-app/prek-pinact"
+rev = "6469487793527fb5efa7dfccc981cbbb2c2bea24" # frozen: v3.10.1
+hooks = [
+  { id = "pinact-update", entry = "pinact run --update --min-age 7", stages = ["pre-push"] },
+]
+
+[[repos]]
+repo = "https://github.com/zizmorcore/zizmor-pre-commit"
+rev = "9257c6050c0261b8c57e712f632dc4a8010109a9" # frozen: v1.25.2
+hooks = [
+  { id = "zizmor", files = "^\\.github/workflows/" },
+]
+
+[[repos]]
+repo = "https://github.com/python-jsonschema/check-jsonschema"
+rev = "f805888065fdb6162e1f800e50bb9460cbd223d6" # frozen: 0.37.2
+hooks = [
+  { id = "check-jsonschema", alias = "goreleaser-schema", name = "goreleaser config schema", args = ["--schemafile", "https://goreleaser.com/static/schema.json"], files = "^\\.goreleaser\\.yaml$" },
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "go-mod-tidy", name = "go mod tidy (root)", entry = "go mod tidy", language = "system", pass_filenames = false },
+  { id = "go-tools-mod-tidy", name = "go mod tidy (tools)", entry = "go -C tools mod tidy", language = "system", pass_filenames = false },
+  { id = "go-test", name = "go test", entry = "go test ./...", language = "system", pass_filenames = false, stages = ["pre-push"] },
+  { id = "go-coverage", name = "go test coverage", entry = "sh -c 'go test -coverprofile=cov.out ./... > /dev/null && go tool -modfile=tools/go.mod go-test-coverage --config=.testcoverage.yml'", language = "system", pass_filenames = false, stages = ["pre-push"] },
+  { id = "govulncheck", name = "govulncheck", entry = "go tool -modfile=tools/go.mod govulncheck ./...", language = "system", pass_filenames = false, stages = ["pre-push"] },
+  { id = "gopls-check", name = "gopls check", entry = "go tool -modfile=tools/go.mod gopls check", language = "system", types = ["go"] },
+  { id = "prek-auto-update", name = "prek auto-update", entry = "prek auto-update --freeze --cooldown-days 7", language = "system", pass_filenames = false, stages = ["pre-push"] },
+  # The dependency-update hooks below each re-run `go mod tidy` so the index/sum stays clean after the bump.
+  { id = "go-update", name = "go get -u (root)", entry = "sh -c 'go get -u all && go mod tidy'", language = "system", pass_filenames = false, stages = ["pre-push"] },
+  { id = "go-tools-update", name = "go get -u tool (tools)", entry = "sh -c 'go -C tools get -u tool && go -C tools mod tidy'", language = "system", pass_filenames = false, stages = ["pre-push"] },
+  { id = "go-major-update", name = "gomajor get all (root)", entry = "sh -c 'go tool -modfile=tools/go.mod gomajor get all && go mod tidy'", language = "system", pass_filenames = false, stages = ["pre-push"] },
+  { id = "go-tools-major-update", name = "gomajor get all (tools)", entry = "sh -c 'go -C tools tool gomajor get all && go -C tools mod tidy'", language = "system", pass_filenames = false, stages = ["pre-push"] },
+]
