@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: 2026 Martijn van der Ven
+# SPDX-License-Identifier: 0BSD
+
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  prek:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          # The Go version here must satisfy the highest floor of any
+          # tool installed by prek (currently pinact, which requires
+          # 1.26+). Bump this when upstream hooks raise their floor.
+          go-version: "1.26"
+          cache: false
+      - uses: j178/prek-action@bdca6f102f98e2b4c7029491a53dfd366469e33d # v2.0.4
+        with:
+          install-only: true
+      - run: prek run --show-diff-on-failure --color=always --all-files
+      - run: prek run --show-diff-on-failure --color=always --all-files --stage pre-push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  goreleaser-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish,sign
+
+  coverage-badge:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: prek
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: go test -coverprofile=cov.out ./...
+      - uses: vladopajic/go-test-coverage@a93b868a4cbcbf18dc3781650fad241f0020e609 # v2.18.8
+        with:
+          config: .testcoverage.yml
+          git-token: ${{ secrets.GITHUB_TOKEN }}
+          git-branch: badges
