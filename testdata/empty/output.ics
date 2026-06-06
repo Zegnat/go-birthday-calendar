@@ -1,0 +1,5 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//go-birthday-calendar//NONSGML birthdaycal//EN
+X-WR-CALNAME:test
+END:VCALENDAR
