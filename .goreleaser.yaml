@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: 2026 Martijn van der Ven
+# SPDX-License-Identifier: 0BSD
+
+version: 2
+
+project_name: birthday-calendar
+
+before:
+  hooks:
+    # Fail loudly if go.mod/go.sum drifts during release instead of
+    # silently rewriting them.
+    - go mod tidy -diff
+    - go mod download
+
+builds:
+  - id: birthday-calendar
+    main: ./cmd/birthday-calendar
+    binary: birthday-calendar
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSES/**
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+signs:
+  - id: checksums
+    cmd: cosign
+    args:
+      - "sign-blob"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    signature: "${artifact}.sigstore.json"
+    artifacts: checksum
+    output: true
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^chore:"
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^build:"
+      - "^style:"
+      - "^refactor:"
+  groups:
+    - title: Features
+      regexp: "^feat(\\(.*\\))?:"
+      order: 0
+    - title: Fixes
+      regexp: "^fix(\\(.*\\))?:"
+      order: 1
+    - title: Performance
+      regexp: "^perf(\\(.*\\))?:"
+      order: 2
+    - title: Other
+      order: 99
+
+release:
+  draft: true
